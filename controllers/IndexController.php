@@ -89,8 +89,8 @@ class Magebase_Hello_IndexController extends Mage_Core_Controller_Front_Action
             );
         }
         return $this->getResponse()
-            ->setHeader('Content-type', 'application/json')
-            ->setHeader('Access-Control-Allow-Origin', '*')
+            ->setHeader('Content-type', 'application/json') //sends the http json header to the browser
+            ->setHeader('Access-Control-Allow-Origin', '*') // Allow other page to get data
             ->setBody(json_encode($methods));
     }
 
