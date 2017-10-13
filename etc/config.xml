@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<config>
+    <modules>
+        <Magebase_Hello>
+            <version>0.1.0</version>
+        </Magebase_Hello>
+    </modules>
+    <frontend>
+        <routers>
+            <hello>
+                <use>standard</use>
+                <args>
+                    <module>Magebase_Hello</module>
+                    <frontName>hello</frontName>
+                </args>
+            </hello>
+        </routers>
+        <layout>
+            <updates>
+                <hello>
+                    <file>hello.xml</file>
+                </hello>
+            </updates>
+        </layout>
+    </frontend>
+    <global>
+        <blocks>
+            <hello>
+                <class>Magebase_Hello_Block</class>
+            </hello>
+        </blocks>
+    </global>
+</config>
