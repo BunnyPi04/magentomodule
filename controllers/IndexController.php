@@ -57,6 +57,7 @@ class Magebase_Hello_IndexController extends Mage_Core_Controller_Front_Action
         $arr_products = array();
         foreach ($product as $ob) {
             $arr_products[] = array(
+                'entity_id'=>$ob->getEntityId(),
                 'sku' => $ob->getSKU(),
                 'name' => $ob->getName(),
                 'type_id' => $ob->getType_id(),
@@ -141,24 +142,20 @@ class Magebase_Hello_IndexController extends Mage_Core_Controller_Front_Action
             ->setBody(json_encode($arr_search));
     }
 
-//    public function stateAction()
-//    {
-//        $country = $_GET["country"];
-//        $regionCollection = Mage::getModel('directory/region')
-//            ->getResourceCollection()
-//            ->addCountryFilter('country_id', $country)
-//            ->load();
-//        $arr_region = array();
-//
-//        foreach ($regionCollection as $region) {
-//            $arr_region[] = $region
-//                ->toArray(array());
-//        }
-//        return $this->getResponse()
-//            ->setHeader('Content-type', 'application/json')
-//            ->setHeader('Access-Control-Allow-Origin', '*')
-//            ->setBody(json_encode($arr_region));
-//    }
+    public function storeAction()
+    {
+        $allStores = Mage::app()->getStores();
+        foreach ($allStores as $eachStoreId => $val)
+        {
+            $arr_store[]=array(
+            'storeName' => Mage::app()->getStore($eachStoreId)->getName(),
+            'storeId' => Mage::app()->getStore($eachStoreId)->getId());
+        }
+        return $this->getResponse()
+            ->setHeader('Content-type', 'application/json')
+            ->setHeader('Access-Control-Allow-Origin', '*')
+            ->setBody(json_encode($arr_store));
+    }
 
     public function countryAction()
     {
@@ -177,5 +174,54 @@ class Magebase_Hello_IndexController extends Mage_Core_Controller_Front_Action
             ->setHeader('Content-type', 'application/json')
             ->setHeader('Access-Control-Allow-Origin', '*')
             ->setBody(json_encode($arr_country));
+    }
+    public function quoteAction()
+    {
+        if (isset($_GET["productId"])&& isset($_GET["customerId"]) && isset($_GET["storeId"])) {
+            $productId = $_GET["productId"];
+            $quote = Mage::getModel('sales/quote');
+            foreach($productId as $singleProduct) {
+                $product = Mage::getModel('catalog/product')->load($singleProduct);
+                $quote->addProduct($product, new Varien_Object(array('qty'=>1)));
+            }
+            $storeId = $_GET["storeId"];
+            $quote->setStoreId($storeId);
+
+            $id = $_GET["customerId"];
+            $customer = Mage::getModel('customer/customer')->load($id);
+            $roleId = $customer->getCustomerGroupId();
+            $role = Mage::getSingleton('customer/group')->load($roleId)->getData('customer_group_code');
+            $quote->assignCustomer($customer);
+
+            $billingAddress = $customer->getDefaultBillingAddress();
+            $quote->getBillingAddress()->addData($billingAddress->getData());
+
+            $shippingAddress = $quote->getShippingAddress();
+            $quote->collectTotals();
+            $shippingAddress->addData($billingAddress->getData())
+                ->setCollectShippingRates(true)
+                ->collectShippingRates()
+                ->setShippingMethod('freeshipping_freeshipping');
+            $quote->setPaymentMethod('cashondelivery');
+
+            $quote->getPayment()->setMethod('cashondelivery');
+            $quote->getPayment()->importData(array('method' => 'cashondelivery'));
+
+//            $increment_id = $service->getOrder()->getRealOrderId();
+            $quoteData= $quote->getData();
+            $grandTotal=$quoteData['grand_total'];
+
+            if (isset($_GET['action'])) {
+                $quote->collectTotals();
+                $quote->save();
+                $service = Mage::getModel('sales/service_quote', $quote);
+                $service->submitAll();
+            }
+            return $this->getResponse()
+                ->setHeader('Content-type', 'application/json') //sends the http json header to the browser
+                ->setHeader('Access-Control-Allow-Origin', '*') // Allow other page to get data
+                ->setBody(json_encode($grandTotal));
+        }
+
     }
 }
