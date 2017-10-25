@@ -194,33 +194,69 @@ class Magebase_Hello_IndexController extends Mage_Core_Controller_Front_Action
             $quote->assignCustomer($customer);
 
             $billingAddress = $customer->getDefaultBillingAddress();
-            $quote->getBillingAddress()->addData($billingAddress->getData());
-
-            $shippingAddress = $quote->getShippingAddress();
-            $quote->collectTotals();
-            $shippingAddress->addData($billingAddress->getData())
-                ->setCollectShippingRates(true)
-                ->collectShippingRates()
-                ->setShippingMethod('freeshipping_freeshipping');
-            $quote->setPaymentMethod('cashondelivery');
-
+            $quote->getBillingAddress()
+                ->addData($billingAddress->getData());
+//            $quote->collectTotals();
+//            var_dump($quote->collectTotals()->getTotals());die;
             $quote->getPayment()->setMethod('cashondelivery');
             $quote->getPayment()->importData(array('method' => 'cashondelivery'));
 
-//            $increment_id = $service->getOrder()->getRealOrderId();
+//            $shippingAddress = $quote->getShippingAddress();
+//            $shippingAddress->addData($billingAddress->getData())
+//                ->setCollectShippingRates(true)
+//                ->collectShippingRates();
+
+//            var_dump($quote->getShippingMethod());die;
+//            $rate = [];
+//            foreach ($quote->getShippingAddress()->getAllSShippingRates() as $rates) {
+//                $rate[]= $rates->getData();
+//            }
             $quoteData= $quote->getData();
             $grandTotal=$quoteData['grand_total'];
+            $result = $grandTotal;
+            if (isset($_GET['ship'])) {
+//
+                if ($_GET['ship'] == 1) {
+                    $quote->getShippingAddress()
+                        ->setRecollect(true)
+                        ->addData($customer->getDefaultShippingAddress()->getData())
+                        ->setCollectShippingRates(true)
+                        ->collectShippingRates();
+
+                    $_rates = $quote->getShippingAddress()->getAllShippingRates();
+                    $shippingRates = array();
+                    foreach ($_rates as $_rate) {
+                        $shippingRates[] = $_rate->getData();
+                    }
+                    $result = $shippingRates;
+                } else {
+                    $ship = $_GET['ship'];
+                    $quote->getShippingAddress()
+                        ->setShippingMethod('ups_GND')
+                        ->setRecollect(true)
+                        ->addData($customer->getDefaultShippingAddress()->getData())
+                        ->setCollectShippingRates(true)
+                        ->collectShippingRates();
+                }
+            }
+
+
+//            $increment_id = $service->getOrder()->getRealOrderId();
 
             if (isset($_GET['action'])) {
+//                $quote->getShippingAddress()
+//                    ->setCollectShippingRates(true)
+//                    ->collectShippingRates();
                 $quote->collectTotals();
                 $quote->save();
+//                var_dump($quote->getShipping);die;
                 $service = Mage::getModel('sales/service_quote', $quote);
-                $service->submitAll();
+                $order = $service->submit();
             }
             return $this->getResponse()
                 ->setHeader('Content-type', 'application/json') //sends the http json header to the browser
                 ->setHeader('Access-Control-Allow-Origin', '*') // Allow other page to get data
-                ->setBody(json_encode($grandTotal));
+                ->setBody(json_encode($result));
         }
 
     }
